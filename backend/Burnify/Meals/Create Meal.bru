@@ -1,0 +1,18 @@
+meta {
+  name: Create Meal
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/meals
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "lunch",
+    "calories": 432
+  }
+}

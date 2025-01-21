@@ -1,0 +1,21 @@
+meta {
+  name: Edit Meal
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/api/meals/2
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/merge-patch+json
+}
+
+body:json {
+  {
+    "calories": 500
+  }
+}
