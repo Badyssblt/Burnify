@@ -3,11 +3,14 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Post;
 use App\Repository\FoodRepository;
+use App\State\FoodDeleteProcessor;
 use App\State\FoodPostProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: FoodRepository::class)]
 #[ApiResource]
@@ -15,11 +18,16 @@ use Doctrine\ORM\Mapping as ORM;
     security: "is_granted('ROLE_USER')",
     processor: FoodPostProcessor::class
 )]
+#[Delete(
+    security: "is_granted('ROLE_USER')",
+    processor: FoodDeleteProcessor::class
+)]
 class Food
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['item:meal:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'food')]
@@ -27,10 +35,24 @@ class Food
     private ?Meal $meal = null;
 
     #[ORM\Column]
+    #[Groups(['item:meal:read'])]
     private ?float $calories = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['item:meal:read'])]
     private ?string $identifier = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['item:meal:read'])]
+    private ?string $name = null;
+
+    #[ORM\Column]
+    #[Groups(['item:meal:read'])]
+    private ?float $weight = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['item:meal:read'])]
+    private ?string $unit = null;
 
     public function getId(): ?int
     {
@@ -70,6 +92,42 @@ class Food
     public function setIdentifier(string $identifier): static
     {
         $this->identifier = $identifier;
+
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function getWeight(): ?float
+    {
+        return $this->weight;
+    }
+
+    public function setWeight(float $weight): static
+    {
+        $this->weight = $weight;
+
+        return $this;
+    }
+
+    public function getUnit(): ?string
+    {
+        return $this->unit;
+    }
+
+    public function setUnit(string $unit): static
+    {
+        $this->unit = $unit;
 
         return $this;
     }

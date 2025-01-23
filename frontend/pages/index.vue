@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Summary from "~/components/Summary.vue";
 import { isToday, isYesterday, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr } from 'date-fns/locale/index.js';
 
 useHead({
   title: 'Accueil'

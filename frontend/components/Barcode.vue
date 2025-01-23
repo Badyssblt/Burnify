@@ -9,11 +9,12 @@
 </template>
 
 <script setup>
-import { BrowserMultiFormatReader, Exception } from "@zxing/library";
+
+import {BrowserMultiFormatReader} from "@zxing/browser";
 
 const isLoading = ref(true);
 const scanner = ref(null);
-const codeReader = new BrowserMultiFormatReader();
+const codeReader = new BrowserMultiFormatReader()
 const barcode = ref(0)
 const model = defineModel();
 const emits = defineEmits(['scanSuccess']);

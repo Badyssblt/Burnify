@@ -25,7 +25,8 @@ use Symfony\Component\Serializer\Attribute\Groups;
 )]
 #[GetCollection(
     provider: MealCollectionProvider::class,
-    security: "is_granted('ROLE_USER')"
+    security: "is_granted('ROLE_USER')",
+    normalizationContext: ['groups' => ['item:meal:read']]
 )]
 #[Get(
     provider: MealGetProvider::class,
@@ -42,21 +43,22 @@ class Meal
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['item:user:read'])]
+    #[Groups(['item:user:read', 'item:meal:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['item:user:read'])]
+    #[Groups(['item:user:read', 'item:meal:read'])]
     private ?string $type = null;
 
     #[ORM\Column]
-    #[Groups(['item:user:read'])]
+    #[Groups(['item:user:read', 'item:meal:read'])]
     private ?float $calories = null;
 
     /**
      * @var Collection<int, Food>
      */
     #[ORM\OneToMany(targetEntity: Food::class, mappedBy: 'meal', orphanRemoval: true)]
+    #[Groups(['item:meal:read'])]
     private Collection $food;
 
     #[ORM\ManyToOne(inversedBy: 'meals')]
@@ -64,7 +66,7 @@ class Meal
     private ?User $user = null;
 
     #[ORM\Column]
-    #[Groups(['item:user:read'])]
+    #[Groups(['item:user:read', 'item:meal:read'])]
     private ?\DateTimeImmutable $created_at = null;
 
 
@@ -106,6 +108,11 @@ class Meal
     public function addCalories(float $calories): void
     {
         $this->calories += $calories;
+    }
+    
+    public function removeCalories(float $calories): void
+    {
+        $this->calories -= $calories;
     }
 
     /**

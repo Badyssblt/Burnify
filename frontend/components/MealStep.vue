@@ -18,6 +18,8 @@ const props = defineProps({
 
 const getMeals = inject('getMeals');
 const barcode = ref<string>("");
+const foodDetailsOpen = ref<boolean>(false);
+const selectedFood = ref<Object>({})
 
 
 /**
@@ -59,7 +61,7 @@ const getFoods = async () => {
   loadingState.value = true;
   try {
     const limit = 10;
-    const url = `https://world.openfoodfacts.net/api/v2/search?categories_tags_fr=Chocolat&fields=product_name_fr,product_name,quantity,energy-kcal_100g,code&locale=fr&page_size=${limit}`;
+    const url = `https://world.openfoodfacts.net/api/v2/search?categories_tags_fr=Chocolat&locale=fr&page_size=${limit}`;
 
     const response = await $api.get(url);
 
@@ -77,7 +79,7 @@ const search = async () => {
   console.log(loadingState);
 
   try {
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query.value}&search_simple=1&action=process&json=1&fields=product_name,code,product_name_fr,product_quantity_unit,code,energy-kcal_100g`;
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query.value}&search_simple=1&action=process&json=1`;
 
     const response = await axios.get(url);
 
@@ -118,7 +120,10 @@ const createMeal = async () => {
   }
 }
 
+provide("createMeal", createMeal)
+
 const addFood = async (food) => {
+  console.log(food)
     if(!props.meal) {
       await createMeal()
       await getMeals();
@@ -126,14 +131,18 @@ const addFood = async (food) => {
     try {
       const response = await $api.post('/api/food', {
         identifier: `${food.code}`,
-        calories: food['energy-kcal_100g'],
-        meal: `/api/meals/${props.meal.id}`
+        calories: food.nutriments['energy-kcal_100g'],
+        name: food.product_name_fr || food.product_name,
+        meal: `/api/meals/${props.meal.id}`,
+        unit: food.product_quantity_unit || 'g',
+        weight: 100
       })
       await getMeals();
     }catch (e) {
       console.log(e)
     }
 }
+
 
 const currentFood = ref();
 
@@ -152,6 +161,31 @@ const fetchFood = async () => {
 
 const loadingState = ref<boolean>(true);
 
+const getNutrientValue = (currentFood, nutrientKey) =>  {
+  if (currentFood.product?.nutriscore?.['2021']?.data?.is_water === "1") {
+    return 0;
+  }
+  if (
+      currentFood.product &&
+      currentFood.product.nutriments &&
+      currentFood.product.nutriments[nutrientKey]
+  ) {
+    return currentFood.product.nutriments[nutrientKey];
+  } else if (
+      currentFood.product &&
+      currentFood.product.nutriments_estimated &&
+      currentFood.product.nutriments_estimated[nutrientKey]
+  ) {
+    return currentFood.product.nutriments_estimated[nutrientKey];
+  } else {
+    return 'Non renseigné';
+  }
+}
+
+// onMounted(() => {
+//   barcode.value = 3057640257773;
+//   fetchFood()
+// })
 
 </script>
 
@@ -177,16 +211,7 @@ const loadingState = ref<boolean>(true);
     <div>
       <UButton @click="isOpen = true; getFoods()" :ui="{ rounded: 'rounded-full' }" class="w-6 h-6 p-0 flex justify-center items-center"><UIcon name="i-heroicons-plus" class="w-4 h-4"/></UButton>
     </div>
-    <UModal v-model="isOpenDetails">
-      <div class="p-4 h-[calc(100vh-50px)] overflow-scroll">
-        <div class="border-b border-white/20 pb-4">
-          <div class="flex gap-4">
-            <UButton @click="isOpenDetails = false" class="p-0" variant="ghost"><UIcon class="w-6 h-6 text-white" name="i-heroicons-arrow-long-left"/></UButton>
-              <h5 class="text-lg font-bold">{{ mealStep[step].title }}</h5>
-          </div>
-        </div>
-      </div>
-    </UModal>
+    <MealStepDetail v-model="isOpenDetails" :mealStep="mealStep" :step="step" :meal="meal"/>
     <UModal v-model="isOpen">
       <div class="p-4 h-[calc(100vh-50px)] overflow-scroll">
         <div class="border-b border-white/20 pb-4">
@@ -199,7 +224,7 @@ const loadingState = ref<boolean>(true);
               <p class="text-sm text-white/60" v-if="meal">{{ meal?.calories }} kcal</p>
             </div>
             <p>{{ meal?.food.length || 0}}</p>
-            <UButton @click="isScannerOpen = true; scanNotActive = true">Scan</UButton>
+            <UButton @click="isScannerOpen = true; scanNotActive = true" v-if="$device.isMobile">Scan</UButton>
 
             <UModal v-model="isScannerOpen">
               <Barcode v-if="!barcode && scanNotActive" @scanSuccess="fetchFood" v-model="barcode"/>
@@ -215,28 +240,28 @@ const loadingState = ref<boolean>(true);
                   <div class="flex justify-between mt-6">
                     <div class="flex flex-col items-center">
                       <p class="font-bold">
-                        {{ currentFood.product && currentFood.product.nutriments && currentFood.product.nutriments['energy-kcal_100g'] || currentFood.product && currentFood.product.nutriments_estimated && currentFood.product.nutriments_estimated['energy-kcal_100g'] || 'Non renseigné' }}
+                        {{ getNutrientValue(currentFood, 'energy-kcal_100g') }}
                       </p>
                       <span class="text-sm">Calories</span>
                     </div>
 
                     <div class="flex flex-col items-center">
                       <p class="font-bold">
-                        {{ currentFood.product && currentFood.product.nutriments && currentFood.product.nutriments['carbohydrates_100g'] || currentFood.product && currentFood.product.nutriments_estimated && currentFood.product.nutriments_estimated['carbohydrates_100g'] || 'Non renseigné' }}
+                        {{ getNutrientValue(currentFood, 'carbohydrates_100g') }}
                       </p>
                       <span class="text-sm">Glucides</span>
                     </div>
 
                     <div class="flex flex-col items-center">
                       <p class="font-bold">
-                        {{ currentFood.product && currentFood.product.nutriments && currentFood.product.nutriments['proteins_100g'] || currentFood.product && currentFood.product.nutriments_estimated && currentFood.product.nutriments_estimated['proteins_100g'] || 'Non renseigné' }}
+                        {{ getNutrientValue(currentFood, 'proteins_100g') }}
                       </p>
                       <span class="text-sm">Protéines</span>
                     </div>
 
                     <div class="flex flex-col items-center">
                       <p class="font-bold">
-                        {{ currentFood.product && currentFood.product.nutriments && currentFood.product.nutriments['fat_100g'] || currentFood.product && currentFood.product.nutriments_estimated && currentFood.product.nutriments_estimated['fat_100g'] || 'Non renseigné' }}
+                        {{ getNutrientValue(currentFood, 'fat_100g') }}
                       </p>
                       <span class="text-sm">Lipides</span>
                     </div>
@@ -246,15 +271,19 @@ const loadingState = ref<boolean>(true);
 
 
                   <div class="fixed bottom-2 w-full left-0 px-6 py-4">
-                    <div class="flex-1 md:flex-none">
-                      <UForm :state="customFoodForm">
+                    <div class="flex-1 md:flex-none" v-if="currentFood">
+                      <UForm :state="customFoodForm" @submit="addFood({
+                        code: `${currentFood.code}`,
+                        'energy-kcal_100g': getNutrientValue(currentFood, 'energy-kcal_100g'),
+                        meal: `/api/meals/${props.meal?.id}`
+                      })">
                         <UFormGroup>
-                          <UInput name="quantity">
+                          <UInput name="quantity" type="number">
                             <template #trailing>
                               <span class="text-gray-500 dark:text-gray-400 text-xs">{{ currentFood.product.product_quantity_unit }}</span>
                             </template>
                           </UInput>
-                          <UButton icon="i-heroicons-plus" class="mt-4" block>Ajouter</UButton>
+                          <UButton icon="i-heroicons-plus" class="mt-4" block type="submit">Ajouter</UButton>
                         </UFormGroup>
                       </UForm>
                     </div>
@@ -287,14 +316,15 @@ const loadingState = ref<boolean>(true);
           </div>
         </div>
         <div class="mt-4 flex flex-col gap-4" v-else>
+          <FoodDetails v-model="foodDetailsOpen" :currentFood="selectedFood" :mealStep="mealStep" :step="step" :meal="meal"/>
           <div class="flex items-center justify-between space-x-4" v-for="food in foods">
             <div>
               <p>{{ food.product_name_fr || food.product_name }}</p>
               <p class="text-sm text-white/50">100 {{ food['product_quantity_unit'] == 'ml' ? 'ml' : 'g' }}</p>
             </div>
             <div class="flex items-center gap-2">
-              <p class="font-bold text-green-500">{{ food['energy-kcal_100g'] }} kcal</p>
-              <UButton @click="addFood(food)" :ui="{ rounded: 'rounded-full' }" class="w-6 h-6 p-0 flex justify-center items-center"><UIcon name="i-heroicons-plus"/></UButton>
+              <p class="font-bold text-green-500">{{ food.nutriments['energy-kcal_100g'] }} kcal</p>
+              <UButton @click="foodDetailsOpen = true; selectedFood = food" :ui="{ rounded: 'rounded-full' }" class="w-6 h-6 p-0 flex justify-center items-center"><UIcon name="i-heroicons-plus"/></UButton>
             </div>
           </div>
         </div>
